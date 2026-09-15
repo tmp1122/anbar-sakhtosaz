@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>دفتر انبار | ساخت‌وساز</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --paper:#f4efe2; --paper2:#eae2cd; --card:#fffdf8; --rule:#d9cfb4;
+  --ink:#2b2419; --ink-muted:#7a6f5c;
+  --navy:#1f4e79; --navy-dim:#e4edf5;
+  --green:#2f6b3f; --green-dim:#e5efe3;
+  --red:#a5372a; --red-dim:#f6e4e0;
+  --mono: ui-monospace, "SF Mono", Consolas, monospace;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);}
+body{font-family:'Vazirmatn',sans-serif;min-height:100vh;font-size:15px;}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;direction:ltr;display:inline-block;}
+input,select,textarea,button{font-family:inherit;}
+
+.topbar{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:2px solid var(--ink);padding:16px 18px;display:flex;align-items:center;justify-content:space-between;}
+.topbar .ttl{font-size:18px;font-weight:800;}
+.topbar .sub{font-size:11.5px;color:var(--ink-muted);margin-top:2px;}
+.burger{background:var(--card);border:2px solid var(--ink);width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;}
+.burger svg{width:19px;height:19px;}
+.content{padding:16px 16px 60px;max-width:640px;margin:0 auto;}
+.empty{color:var(--ink-muted);text-align:center;padding:40px 16px;font-size:13.5px;}
+
+.card{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 0 var(--rule);}
+.stamp-card{border:2px dashed var(--navy);}
+.section-title{font-size:13px;font-weight:800;color:var(--ink-muted);margin:20px 2px 10px;text-transform:uppercase;letter-spacing:.3px;}
+
+.btn{background:var(--navy);color:#fff;border:none;padding:14px 16px;border-radius:12px;font-weight:700;font-size:14.5px;width:100%;}
+.btn:disabled{opacity:.5;}
+.btn-outline{background:var(--card);color:var(--navy);border:2px solid var(--navy);}
+.btn-green{background:var(--green);color:#fff;}
+.btn-red{background:var(--red);color:#fff;}
+.btn-flat{background:none;border:none;color:var(--navy);font-weight:700;font-size:13px;padding:6px 2px;}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+.field{margin-bottom:13px;}
+.field label{display:block;font-size:12px;color:var(--ink-muted);margin-bottom:6px;font-weight:600;}
+.req::after{content:" *";color:var(--red);}
+input[type=text],input[type=password],input[type=number],input[type=datetime-local],input[type=date],select,textarea{
+  width:100%;background:var(--card);border:1.5px solid var(--rule);color:var(--ink);
+  padding:12px 13px;border-radius:11px;font-size:14.5px;}
+input:focus,select:focus{outline:none;border-color:var(--navy);}
+input[type=file]{width:100%;color:var(--ink-muted);font-size:12px;}
+.error-box{background:var(--red-dim);border:1.5px solid var(--red);color:var(--red);padding:11px 14px;border-radius:11px;margin-bottom:14px;font-size:13px;font-weight:600;}
+.file-ok{font-size:11.5px;color:var(--green);margin-top:5px;font-weight:600;}
+.hint{background:var(--navy-dim);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--navy);margin-bottom:14px;}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:16px;}
+.stat{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:13px 6px;text-align:center;}
+.stat .n{font-size:20px;font-weight:800;}
+.stat .l{font-size:10px;color:var(--ink-muted);margin-top:3px;}
+
+/* ledger */
+.ledger-row{display:flex;gap:11px;padding:12px 0;border-bottom:1px dashed var(--rule);}
+.ledger-row:last-child{border-bottom:none;}
+.stamp{width:34px;height:34px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;}
+.stamp.in{background:var(--green-dim);color:var(--green);}
+.stamp.out{background:var(--red-dim);color:var(--red);}
+.ledger-main{flex:1;min-width:0;}
+.ledger-top{display:flex;justify-content:space-between;gap:8px;}
+.ledger-name{font-weight:700;font-size:14px;}
+.ledger-qty{font-size:13.5px;font-weight:800;}
+.ledger-qty.in{color:var(--green);} .ledger-qty.out{color:var(--red);}
+.ledger-meta{font-size:11.5px;color:var(--ink-muted);margin-top:3px;}
+
+/* item row */
+.item-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 0;border-bottom:1px dashed var(--rule);}
+.item-row:last-child{border-bottom:none;}
+.item-name{font-weight:700;font-size:14.5px;}
+.item-sub{font-size:11.5px;color:var(--ink-muted);margin-top:2px;}
+.item-stock{text-align:left;flex-shrink:0;}
+.item-stock .n{font-size:16px;font-weight:800;}
+.item-stock .u{font-size:10.5px;color:var(--ink-muted);}
+.low{color:var(--red) !important;}
+
+/* tree */
+.tree-item{display:flex;justify-content:space-between;align-items:center;background:var(--card);border:1.5px solid var(--rule);border-radius:12px;padding:15px 16px;margin-bottom:9px;}
+.tree-item.selectable:active{border-color:var(--navy);}
+.tree-item .t{font-weight:700;font-size:14.5px;}
+.tree-item .arrow{color:var(--ink-muted);}
+.crumbs{font-size:12px;color:var(--navy);font-weight:700;margin-bottom:14px;}
+.step-dots{display:flex;gap:6px;margin-bottom:16px;}
+.step-dots span{flex:1;height:4px;border-radius:3px;background:var(--rule);}
+.step-dots span.on{background:var(--navy);}
+
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:800;}
+.badge-admin{background:#e6dcf5;color:#5a3a8f;} .badge-user{background:var(--paper2);color:var(--ink-muted);}
+
+.search-wrap{position:relative;margin-bottom:12px;}
+.dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--card);border:1.5px solid var(--rule);border-radius:11px;max-height:220px;overflow:auto;z-index:15;box-shadow:0 6px 18px rgba(0,0,0,.15);}
+.dropdown div{padding:11px 13px;font-size:13.5px;border-bottom:1px solid var(--rule);}
+.dropdown div:last-child{border-bottom:none;}
+
+/* drawer */
+.drawer-bg{position:fixed;inset:0;background:rgba(20,15,5,.5);z-index:60;}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:78%;max-width:300px;background:var(--paper);border-left:2px solid var(--ink);padding:20px 16px calc(20px + var(--safe-b));overflow:auto;}
+.drawer h2{font-size:16px;margin:4px 0 18px;}
+.drawer-link{display:flex;align-items:center;gap:12px;padding:13px 4px;font-size:14.5px;font-weight:700;border-bottom:1px dashed var(--rule);}
+.drawer-link svg{width:18px;height:18px;color:var(--navy);flex-shrink:0;}
+
+.fab-wrap{position:fixed;left:18px;bottom:calc(18px + var(--safe-b));z-index:25;display:flex;flex-direction:column;gap:10px;}
+.fab{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,.25);border:none;color:#fff;font-size:24px;}
+.fab.green{background:var(--green);} .fab.red{background:var(--red);}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;z-index:50;}
+.modal{background:var(--paper);border:2px solid var(--ink);border-radius:18px 18px 0 0;padding:20px 18px calc(20px + var(--safe-b));width:100%;max-width:640px;max-height:90vh;overflow:auto;}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.modal-head h3{font-size:16px;margin:0;font-weight:800;}
+.close-x{background:var(--card);border:1.5px solid var(--ink);color:var(--ink);width:30px;height:30px;border-radius:9px;font-size:17px;}
+
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--paper);}
+.login-box{width:100%;max-width:360px;}
+.login-mark{width:56px;height:56px;background:var(--navy);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:26px;color:#fff;}
+.login-title{text-align:center;font-size:19px;font-weight:800;margin-bottom:4px;}
+.login-sub{text-align:center;font-size:12.5px;color:var(--ink-muted);margin-bottom:24px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+/* ⚠️ این دو مقدار رو با اطلاعات پروژه‌ی خودت عوض کن (Project Settings → API) */
+const SUPABASE_URL = "https://gsqwuibzplwalrahevdc.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_8duEw2Pj-B8fEupNzDzHag_CHN0riMC";
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const UNITS = ["عدد","کیلوگرم","تن","متر","متر مربع","متر مکعب","شاخه","لیتر","کیسه","پاکت","رول","بسته"];
+const PERMISSIONS = {
+  "transactions.create": ["user","admin"],
+  "items.manage": ["admin"], "categories.manage": ["admin"], "users.manage": ["admin"],
+};
+const ICONS = {
+  burger:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>',
+  box:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>',
+  list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+  tags:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12.6L12 21.2 2.8 12 11.4 3.4H20.6v9.2z"/></svg>',
+  users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>',
+  logout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>',
+  in:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>',
+  out:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+};
+function icon(n){ return h("span",{html:ICONS[n]||""}); }
+
+function h(tag, props, children){
+  var el = document.createElement(tag); props = props||{};
+  for(var k in props){
+    if(k==="className") el.className = props[k];
+    else if(k==="html") el.innerHTML = props[k];
+    else if(k==="style") Object.assign(el.style, props[k]);
+    else if(k.indexOf("on")===0) el[k.toLowerCase()] = props[k];
+    else if(k==="value") el.value = props[k];
+    else if(k==="selected"){ if(props[k]) el.setAttribute("selected","selected"); }
+    else if(k==="disabled"){ if(props[k]) el.setAttribute("disabled","disabled"); }
+    else el.setAttribute(k, props[k]);
+  }
+  (children||[]).forEach(function(c){ if(c==null) return; el.appendChild(typeof c==="string"||typeof c==="number"?document.createTextNode(c):c); });
+  return el;
+}
+function toLatinDigits(str){
+  if(str==null) return "";
+  var fa="۰۱۲۳۴۵۶۷۸۹", ar="٠١٢٣٤٥٦٧٨٩";
+  return String(str).replace(/[۰-۹]/g,function(d){return fa.indexOf(d);}).replace(/[٠-٩]/g,function(d){return ar.indexOf(d);});
+}
+function normalizeFa(s){ return (s||"").toString().replace(/\u064A/g,"ی").replace(/\u0643/g,"ک").replace(/[\u200c\u200f\u200e]/g,"").trim(); }
+function can(perm){ if(!state.currentUser) return false; var r=PERMISSIONS[perm]; return r?r.indexOf(state.currentUser.role)!==-1:false; }
+function nowLocal(){ var d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); }
+function toFaDigits(n){ var fa=["۰","۱","۲","۳","۴","۵","۶","۷","۸","۹"]; return String(n).replace(/\d/g,function(d){return fa[d];}); }
+var JALALI_MONTHS=["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
+function gregorianToJalali(gy, gm, gd){
+  var g_d_m=[0,31,59,90,120,151,181,212,243,273,304,334];
+  var jy=(gy<=1600)?0:979; gy-=(gy<=1600)?621:1600;
+  var gy2=(gm>2)?(gy+1):gy;
+  var days=(365*gy)+parseInt((gy2+3)/4)-parseInt((gy2+99)/100)+parseInt((gy2+399)/400)-80+gd+g_d_m[gm-1];
+  jy+=33*parseInt(days/12053); days%=12053;
+  jy+=4*parseInt(days/1461); days%=1461;
+  if(days>365){ jy+=parseInt((days-1)/365); days=(days-1)%365; }
+  var jm,jd;
+  if(days<186){ jm=1+parseInt(days/31); jd=1+(days%31); }
+  else { jm=7+parseInt((days-186)/30); jd=1+((days-186)%30); }
+  return [jy,jm,jd];
+}
+function jalaliDateStr(d){
+  var j=gregorianToJalali(d.getFullYear(), d.getMonth()+1, d.getDate());
+  return toFaDigits(j[0])+"/"+toFaDigits(String(j[1]).padStart(2,"0"))+"/"+toFaDigits(String(j[2]).padStart(2,"0"));
+}
+function jalaliDateStrLong(d){
+  var j=gregorianToJalali(d.getFullYear(), d.getMonth()+1, d.getDate());
+  return toFaDigits(j[2])+" "+JALALI_MONTHS[j[1]-1]+" "+toFaDigits(j[0]);
+}
+function jalaliTimeStr(d){
+  return toFaDigits(String(d.getHours()).padStart(2,"0"))+":"+toFaDigits(String(d.getMinutes()).padStart(2,"0"));
+}
+function fmtDT(s){ if(!s) return "-"; var d=new Date(s); return jalaliDateStr(d)+" - "+jalaliTimeStr(d); }
+function fmtDTLong(s){ if(!s) return "-"; var d=new Date(s); return jalaliDateStrLong(d)+" - ساعت "+jalaliTimeStr(d); }
+function jalaliPreviewFromLocalInput(val, hasTime){
+  if(!val) return "";
+  var parts = val.split("T"); var dp = parts[0].split("-");
+  if(dp.length<3) return "";
+  var d = new Date(Number(dp[0]), Number(dp[1])-1, Number(dp[2]));
+  var out = "📅 "+jalaliDateStrLong(d);
+  if(hasTime && parts[1]) out += " - ساعت "+toFaDigits(parts[1].slice(0,5));
+  return out;
+}
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function jalaliToGregorian(jy, jm, jd){
+  jy += 1595;
+  var days = -355668 + (365*jy) + (parseInt(jy/33)*8) + parseInt(((jy%33)+3)/4) + jd + ((jm<7)?(jm-1)*31:(((jm-7)*30)+186));
+  var gy = 400*parseInt(days/146097); days %= 146097;
+  if(days>36524){ gy += 100*parseInt((days-1)/36524); days=(days-1)%36524; if(days>=365) days++; }
+  gy += 4*parseInt(days/1461); days %= 1461;
+  if(days>365){ gy += parseInt((days-1)/365); days=(days-1)%365; }
+  var gd = days+1;
+  var isLeap = (gy%4===0 && gy%100!==0) || (gy%400===0);
+  var sal_a=[0,31,isLeap?29:28,31,30,31,30,31,31,30,31,30,31];
+  var gm=0;
+  for(gm=1; gm<=12; gm++){ if(gd<=sal_a[gm]) break; gd-=sal_a[gm]; }
+  return [gy, gm, gd];
+}
+function parseLocalDateValue(val){
+  var parts = val.split("T"); var dp=parts[0].split("-");
+  var d = new Date(Number(dp[0]), Number(dp[1])-1, Number(dp[2]));
+  if(parts[1]){ var tp=parts[1].split(":"); d.setHours(Number(tp[0])); d.setMinutes(Number(tp[1])); }
+  return d;
+}
+/* ---------- انتخاب‌گر تاریخ شمسی ---------- */
+var jpState = null;
+function openJalaliPicker(currentLocalVal, hasTime, onConfirm){
+  var base = currentLocalVal ? parseLocalDateValue(currentLocalVal) : new Date();
+  var j = gregorianToJalali(base.getFullYear(), base.getMonth()+1, base.getDate());
+  jpState = { y:j[0], m:j[1], d:j[2], h:base.getHours(), mi:base.getMinutes(), hasTime:hasTime, onConfirm:onConfirm };
+  render();
+}
+function jalaliDayCount(jm){ return jm<=6?31:30; }
+function buildJalaliPickerModal(){
+  if(!jpState) return null;
+  var bg=h("div",{className:"modal-bg",onclick:function(e){if(e.target===bg){jpState=null;render();}}});
+  var m=h("div",{className:"modal"});
+  m.appendChild(h("div",{className:"modal-head"},[h("h3",{},["انتخاب "+(jpState.hasTime?"تاریخ و ساعت":"تاریخ")]),h("button",{className:"close-x",onclick:function(){jpState=null;render();}},["×"])]));
+  var row=h("div",{className:"row-2"});
+  var dayCount=jalaliDayCount(jpState.m);
+  var dSel=h("select",{onchange:function(e){jpState.d=Number(e.target.value); render();}});
+  for(var dd=1; dd<=dayCount; dd++) dSel.appendChild(h("option",{value:dd,selected:jpState.d===dd},[toFaDigits(dd)]));
+  var dField=h("div",{className:"field"}); dField.appendChild(h("label",{},["روز"])); dField.appendChild(dSel); row.appendChild(dField);
+  var mSel=h("select",{onchange:function(e){jpState.m=Number(e.target.value); var dc=jalaliDayCount(jpState.m); if(jpState.d>dc) jpState.d=dc; render();}});
+  JALALI_MONTHS.forEach(function(name,idx){ mSel.appendChild(h("option",{value:idx+1,selected:jpState.m===idx+1},[name])); });
+  var mField=h("div",{className:"field"}); mField.appendChild(h("label",{},["ماه"])); mField.appendChild(mSel); row.appendChild(mField);
+  m.appendChild(row);
+  var yField=h("div",{className:"field"}); yField.appendChild(h("label",{},["سال"]));
+  var ySel=h("select",{onchange:function(e){jpState.y=Number(e.target.value); render();}});
+  var curY=jpState.y;
+  for(var yy=curY-8; yy<=curY+8; yy++) ySel.appendChild(h("option",{value:yy,selected:yy===curY},[toFaDigits(yy)]));
+  yField.appendChild(ySel); m.appendChild(yField);
+  if(jpState.hasTime){
+    var tRow=h("div",{className:"row-2"});
+    var hSel=h("select",{onchange:function(e){jpState.h=Number(e.target.value); render();}});
+    for(var hh=0; hh<24; hh++) hSel.appendChild(h("option",{value:hh,selected:jpState.h===hh},[toFaDigits(String(hh).padStart(2,"0"))]));
+    var hField=h("div",{className:"field"}); hField.appendChild(h("label",{},["ساعت"])); hField.appendChild(hSel); tRow.appendChild(hField);
+    var miSel=h("select",{onchange:function(e){jpState.mi=Number(e.target.value); render();}});
+    for(var mm=0; mm<60; mm+=5) miSel.appendChild(h("option",{value:mm,selected:Math.abs(jpState.mi-mm)<5},[toFaDigits(String(mm).padStart(2,"0"))]));
+    var miField=h("div",{className:"field"}); miField.appendChild(h("label",{},["دقیقه"])); miField.appendChild(miSel); tRow.appendChild(miField);
+    m.appendChild(tRow);
+  }
+  m.appendChild(h("button",{className:"btn",onclick:function(){
+    var g=jalaliToGregorian(jpState.y, jpState.m, jpState.d);
+    var val=String(g[0]).padStart(4,"0")+"-"+String(g[1]).padStart(2,"0")+"-"+String(g[2]).padStart(2,"0");
+    if(jpState.hasTime) val += "T"+String(jpState.h).padStart(2,"0")+":"+String(jpState.mi).padStart(2,"0");
+    var cb=jpState.onConfirm; jpState=null; cb(val); render();
+  }},["تأیید"]));
+  bg.appendChild(m); return bg;
+}
+function jalaliPickerField(labelText, required, currentVal, hasTime, onConfirm){
+  var field=h("div",{className:"field"});
+  field.appendChild(h("label",{className:required?"req":""},[labelText]));
+  var display = currentVal ? (hasTime? fmtDT(currentVal.length>10?currentVal: currentVal+"T00:00") : jalaliDateStrLong(parseLocalDateValue(currentVal)) ) : "انتخاب کن";
+  var btn=h("button",{type:"button",style:{width:"100%",background:"var(--card)",border:"1.5px solid var(--rule)",color:"var(--ink)",padding:"12px 13px",borderRadius:"11px",fontSize:"14.5px",textAlign:"right",display:"flex",justifyContent:"space-between",alignItems:"center"},
+    onclick:function(){ openJalaliPicker(currentVal, hasTime, onConfirm); }},[
+    h("span",{},[display]), h("span",{style:{color:"var(--ink-muted)"}},["📅"])
+  ]);
+  field.appendChild(btn);
+  return field;
+}
+
+var state = {
+  page:"dashboard", currentUser:null, loading:false, error:"", drawerOpen:false,
+  categories:[], items:[], transactions:[], users:[],
+  loginForm:{code:"",password:""},
+};
+function roots(){ return state.categories.filter(function(c){return !c.parent_id;}); }
+function childrenOf(id){ return state.categories.filter(function(c){return c.parent_id===id;}); }
+function catPath(id){
+  var c = state.categories.find(function(x){return x.id===id;});
+  if(!c) return "-";
+  var p = state.categories.find(function(x){return x.id===c.parent_id;});
+  return p ? p.name+" ← "+c.name : c.name;
+}
+function itemsIn(catId){ return state.items.filter(function(i){return i.category_id===catId;}); }
+function codeBadge(code){ return code ? h("span",{className:"num",style:{marginLeft:"6px"}},[code]) : null; }
+function pad(n,len){ return String(n).padStart(len,"0"); }
+function generateItemCode(catId){
+  var sub = state.categories.find(function(c){return c.id===catId;});
+  if(!sub) return null;
+  var rootId = sub.parent_id;
+  var rs = roots().slice().sort(function(a,b){ return new Date(a.created_at)-new Date(b.created_at); });
+  var rIdx = rs.findIndex(function(r){return r.id===rootId;}) + 1;
+  var subs = childrenOf(rootId).slice().sort(function(a,b){ return new Date(a.created_at)-new Date(b.created_at); });
+  var sIdx = subs.findIndex(function(s){return s.id===catId;}) + 1;
+  var seq = itemsIn(catId).length + 1;
+  return pad(rIdx,2)+pad(sIdx,2)+pad(seq,3);
+}
+
+/* ---------- data ---------- */
+function loadAll(){
+  sb.from("categories").select("*").order("name").then(function(r){ state.categories=r.data||[]; render(); });
+  sb.from("items").select("*").order("name").then(function(r){ state.items=r.data||[]; render(); });
+  sb.from("transactions").select("*, items(name,unit,category_id,code)").order("tx_datetime",{ascending:false}).limit(300)
+    .then(function(r){ state.transactions=r.data||[]; render(); });
+}
+function loadUsers(){ sb.from("users").select("id,name,code,role,created_at").order("created_at").then(function(r){ state.users=r.data||[]; render(); }); }
+
+/* ---------- session ---------- */
+function saveSession(u){ try{ localStorage.setItem("anbar2-session", JSON.stringify(u)); }catch(e){} }
+function loadSession(){ try{ var v=localStorage.getItem("anbar2-session"); return v?JSON.parse(v):null; }catch(e){ return null; } }
+function clearSession(){ try{ localStorage.removeItem("anbar2-session"); }catch(e){} }
+function doLogin(){
+  state.error="";
+  var code=toLatinDigits(state.loginForm.code.trim()), pass=toLatinDigits(state.loginForm.password);
+  if(!code||!pass){ state.error="کد کاربری و رمز عبور را وارد کنید"; render(); return; }
+  state.loading=true; render();
+  sb.rpc("login",{p_code:code,p_password:pass}).then(function(res){
+    state.loading=false;
+    if(res.error||!res.data||!res.data.length){ state.error="کد کاربری یا رمز عبور اشتباه است"; render(); return; }
+    var u=res.data[0]; state.currentUser=u; saveSession(u); state.page="dashboard"; state.loginForm={code:"",password:""};
+    loadAll(); if(can("users.manage")) loadUsers(); render();
+  });
+}
+function doLogout(){ state.currentUser=null; clearSession(); state.page="dashboard"; state.drawerOpen=false; render(); }
+
+/* ============================================================ صفحه‌ی ورود ============================================================ */
+function pageLogin(){
+  var wrap=h("div",{className:"login-wrap"}), box=h("div",{className:"login-box"});
+  box.appendChild(h("div",{className:"login-mark"},["🏗"]));
+  box.appendChild(h("div",{className:"login-title"},["دفتر انبار ساخت‌وساز"]));
+  box.appendChild(h("div",{className:"login-sub"},["ورود به سامانه"]));
+  if(state.error) box.appendChild(h("div",{className:"error-box"},[state.error]));
+  var f1=h("div",{className:"field"}); f1.appendChild(h("label",{className:"req"},["کد کاربری"]));
+  f1.appendChild(h("input",{type:"text",inputmode:"numeric",value:state.loginForm.code,oninput:function(e){state.loginForm.code=e.target.value;}}));
+  box.appendChild(f1);
+  var f2=h("div",{className:"field"}); f2.appendChild(h("label",{className:"req"},["رمز عبور"]));
+  f2.appendChild(h("input",{type:"password",value:state.loginForm.password,
+    oninput:function(e){state.loginForm.password=e.target.value;},
+    onkeydown:function(e){if(e.key==="Enter") doLogin();}}));
+  box.appendChild(f2);
+  box.appendChild(h("button",{className:"btn",disabled:state.loading,onclick:doLogin},[state.loading?"در حال ورود...":"ورود"]));
+  wrap.appendChild(box); return wrap;
+}
+
+/* ============================================================ چارچوب ============================================================ */
+function topBar(title){
+  var bar=h("div",{className:"topbar"});
+  bar.appendChild(h("button",{className:"burger",onclick:function(){state.drawerOpen=true;render();}},[icon("burger")]));
+  var mid=h("div",{style:{textAlign:"center",flex:"1"}});
+  mid.appendChild(h("div",{className:"ttl"},[title]));
+  bar.appendChild(mid);
+  bar.appendChild(h("div",{style:{width:"42px"}}));
+  return bar;
+}
+function drawer(){
+  if(!state.drawerOpen) return null;
+  var bg=h("div",{className:"drawer-bg",onclick:function(e){ if(e.target===bg){state.drawerOpen=false;render();} }});
+  var d=h("div",{className:"drawer"});
+  d.appendChild(h("h2",{},["منو"]));
+  var prof=h("div",{className:"card",style:{marginBottom:"16px"}});
+  prof.appendChild(h("div",{style:{fontWeight:"700"}},[state.currentUser.name]));
+  prof.appendChild(h("span",{className:"badge "+(state.currentUser.role==="admin"?"badge-admin":"badge-user"),style:{marginTop:"6px",display:"inline-block"}},[state.currentUser.role==="admin"?"مدیر":"کاربر"]));
+  d.appendChild(prof);
+  function link(label,ic,pg){
+    var row=h("div",{className:"drawer-link",onclick:function(){ state.page=pg; state.drawerOpen=false; state.error=""; render(); }});
+    row.appendChild(icon(ic)); row.appendChild(h("span",{},[label])); return row;
+  }
+  d.appendChild(link("داشبورد","home","dashboard"));
+  d.appendChild(link("موجودی انبار","box","inventory"));
+  d.appendChild(link("تراکنش‌ها و گزارش‌ها","list","history"));
+  if(can("categories.manage")) d.appendChild(link("دسته‌بندی‌ها","tags","categories"));
+  if(can("users.manage")) d.appendChild(link("مدیریت کاربران","users","users"));
+  var out=h("div",{className:"drawer-link",style:{color:"var(--red)",marginTop:"10px",border:"none"},onclick:doLogout});
+  out.appendChild(icon("logout")); out.appendChild(h("span",{},["خروج از حساب"]));
+  d.appendChild(out);
+  bg.appendChild(d); return bg;
+}
+function fabs(){
+  if(!can("transactions.create")) return null;
+  var wrap=h("div",{className:"fab-wrap"});
+  wrap.appendChild(h("button",{className:"fab green",onclick:function(){ startWizard("in"); }},[icon("in")]));
+  wrap.appendChild(h("button",{className:"fab red",onclick:function(){ startWizard("out"); }},[icon("out")]));
+  return wrap;
+}
+
+/* ============================================================ داشبورد ============================================================ */
+function pageDashboard(){
+  var wrap=h("div",{}); wrap.appendChild(topBar("داشبورد"));
+  var content=h("div",{className:"content"});
+  var low = state.items.filter(function(i){return Number(i.current_stock)<=Number(i.min_stock||0);});
+  var today = state.transactions.filter(function(t){return String(t.tx_datetime).slice(0,10)===todayStr();});
+  var stats=h("div",{className:"stats"});
+  stats.appendChild(h("div",{className:"stat"},[h("div",{className:"n"},[String(state.items.length)]),h("div",{className:"l"},["اقلام"])]));
+  stats.appendChild(h("div",{className:"stat"},[h("div",{className:"n"},[String(today.length)]),h("div",{className:"l"},["تراکنش امروز"])]));
+  stats.appendChild(h("div",{className:"stat"},[h("div",{className:"n"+(low.length?" low":"")},[String(low.length)]),h("div",{className:"l"},["کمبود موجودی"])]));
+  content.appendChild(stats);
+
+  var actions=h("div",{className:"row-2",style:{marginBottom:"18px"}});
+  actions.appendChild(h("button",{className:"btn btn-green",onclick:function(){startWizard("in");}},["↓ ثبت ورود جنس"]));
+  actions.appendChild(h("button",{className:"btn btn-red",onclick:function(){startWizard("out");}},["↑ ثبت خروج جنس"]));
+  content.appendChild(actions);
+
+  if(low.length){
+    content.appendChild(h("div",{className:"section-title"},["اقلام با موجودی کم"]));
+    var lc=h("div",{className:"card"});
+    low.slice(0,6).forEach(function(i){
+      lc.appendChild(h("div",{className:"item-row"},[h("div",{},[h("div",{className:"item-name"},[i.name]),h("div",{className:"item-sub num"},[i.code||""])]),
+        h("div",{className:"item-stock"},[h("span",{className:"n num low"},[String(i.current_stock)]),h("span",{className:"u"},[" "+i.unit])])]));
+    });
+    content.appendChild(lc);
+  }
+  content.appendChild(h("div",{className:"section-title"},["آخرین رویدادها"]));
+  content.appendChild(ledgerCard(state.transactions.slice(0,10)));
+  wrap.appendChild(content); wrap.appendChild(fabs()); return wrap;
+}
+function ledgerCard(list){
+  if(!list.length) return h("div",{className:"card"},[h("div",{className:"empty"},["تراکنشی ثبت نشده"])]);
+  var card=h("div",{className:"card"});
+  list.forEach(function(t){
+    var row=h("div",{className:"ledger-row"});
+    row.appendChild(h("div",{className:"stamp "+t.type},[t.type==="in"?"↓":"↑"]));
+    var main=h("div",{className:"ledger-main"});
+    var top=h("div",{className:"ledger-top"});
+    top.appendChild(h("div",{className:"ledger-name"},[codeBadge(t.items&&t.items.code), (t.items?t.items.name:"-")]));
+    top.appendChild(h("div",{className:"ledger-qty num "+t.type},[(t.type==="in"?"+":"−")+t.quantity+" "+t.unit]));
+    main.appendChild(top);
+    var meta=[fmtDT(t.tx_datetime)];
+    if(t.type==="in" && t.seller_name) meta.push("فروشنده: "+t.seller_name);
+    if(t.type==="out" && t.usage_location) meta.push("محل مصرف: "+t.usage_location);
+    main.appendChild(h("div",{className:"ledger-meta"},[meta.join(" · ")]));
+    row.appendChild(main); card.appendChild(row);
+  });
+  return card;
+}
+
+/* ============================================================ موجودی (درخت) ============================================================ */
+var invPath=[]; // [rootId, subId]
+function pageInventory(){
+  var wrap=h("div",{}); wrap.appendChild(topBar("موجودی انبار"));
+  var content=h("div",{className:"content"});
+
+  if(invPath.length===0){
+    if(can("items.manage")) content.appendChild(h("button",{className:"btn-flat",onclick:function(){ openCategoryModal(null,null); }},["＋ افزودن مجموعه‌ی جدید"]));
+    var rs = roots();
+    if(!rs.length) content.appendChild(h("div",{className:"empty"},["هنوز مجموعه‌ای تعریف نشده"]));
+    rs.forEach(function(c){
+      var row=h("div",{className:"tree-item selectable",onclick:function(){ invPath=[c.id]; render(); }});
+      row.appendChild(h("div",{className:"t"},["📁 "+c.name]));
+      row.appendChild(h("div",{className:"arrow"},["←"]));
+      content.appendChild(row);
+    });
+  } else if(invPath.length===1){
+    var root = state.categories.find(function(c){return c.id===invPath[0];});
+    content.appendChild(h("div",{className:"crumbs",onclick:function(){invPath=[];render();}},["‹ بازگشت به مجموعه‌ها  —  "+root.name]));
+    if(can("items.manage")) content.appendChild(h("button",{className:"btn-flat",onclick:function(){ openCategoryModal(root.id,null); }},["＋ افزودن زیرمجموعه"]));
+    var subs = childrenOf(root.id);
+    if(!subs.length) content.appendChild(h("div",{className:"empty"},["زیرمجموعه‌ای تعریف نشده"]));
+    subs.forEach(function(c){
+      var row=h("div",{className:"tree-item selectable",onclick:function(){ invPath=[root.id,c.id]; render(); }});
+      row.appendChild(h("div",{className:"t"},["📂 "+c.name]));
+      row.appendChild(h("div",{className:"arrow"},["←"]));
+      content.appendChild(row);
+    });
+  } else {
+    var root2 = state.categories.find(function(c){return c.id===invPath[0];});
+    var sub = state.categories.find(function(c){return c.id===invPath[1];});
+    content.appendChild(h("div",{className:"crumbs",onclick:function(){invPath=[root2.id];render();}},["‹ "+root2.name+" ← "+sub.name]));
+    var list = itemsIn(sub.id);
+    var card = h("div",{className:"card"});
+    if(!list.length){ card.appendChild(h("div",{className:"empty"},["جنسی در این زیرمجموعه ثبت نشده"])); }
+    list.forEach(function(i){
+      var low = Number(i.current_stock)<=Number(i.min_stock||0);
+      var row=h("div",{className:"item-row"});
+      var left=h("div",{});
+      left.appendChild(h("div",{className:"item-name"},[i.name]));
+      if(i.code) left.appendChild(h("div",{className:"item-sub num"},[i.code]));
+      if(can("items.manage")){
+        var ops=h("div",{style:{marginTop:"6px",display:"flex",gap:"14px"}});
+        ops.appendChild(h("button",{className:"btn-flat",style:{padding:0,fontSize:"11.5px"},onclick:function(){ openItemModal(i); }},["ویرایش"]));
+        ops.appendChild(h("button",{className:"btn-flat",style:{padding:0,fontSize:"11.5px",color:"var(--red)"},onclick:function(){ deleteItem(i); }},["حذف"]));
+        left.appendChild(ops);
+      }
+      row.appendChild(left);
+      row.appendChild(h("div",{className:"item-stock"},[h("div",{},[h("span",{className:"n num"+(low?" low":"")},[String(i.current_stock)]),h("span",{className:"u"},[" "+i.unit])]),h("div",{className:"item-sub"},["حد: "+(i.min_stock||0)])]));
+      card.appendChild(row);
+    });
+    content.appendChild(card);
+  }
+  wrap.appendChild(content); wrap.appendChild(fabs()); return wrap;
+}
+function deleteItem(item){
+  if(!confirm("جنس «"+item.name+"» حذف شود؟")) return;
+  sb.from("items").delete().eq("id",item.id).then(function(res){ if(res.error){alert("خطا در حذف (احتمالاً این جنس تراکنش دارد)");return;} loadAll(); });
+}
+var showItemModal=false, editingItem=null, itemForm=null;
+function openItemModal(item){
+  editingItem=item; itemForm={name:item.name,unit:item.unit,min_stock:item.min_stock||0}; showItemModal=true; state.error=""; render();
+}
+function buildItemModal(){
+  if(!showItemModal) return null;
+  var f=itemForm;
+  var bg=h("div",{className:"modal-bg",onclick:function(e){if(e.target===bg){showItemModal=false;render();}}});
+  var m=h("div",{className:"modal"});
+  m.appendChild(h("div",{className:"modal-head"},[h("h3",{},["ویرایش جنس"]),h("button",{className:"close-x",onclick:function(){showItemModal=false;render();}},["×"])]));
+  if(state.error) m.appendChild(h("div",{className:"error-box"},[state.error]));
+  if(editingItem.code) m.appendChild(h("div",{className:"hint num"},["کد جنس: "+editingItem.code]));
+  var f1=h("div",{className:"field"}); f1.appendChild(h("label",{},["نام جنس"]));
+  f1.appendChild(h("input",{type:"text",value:f.name,oninput:function(e){f.name=e.target.value;}})); m.appendChild(f1);
+  var f2=h("div",{className:"field"}); f2.appendChild(h("label",{},["حد هشدار موجودی"]));
+  f2.appendChild(h("input",{type:"number",value:f.min_stock,oninput:function(e){f.min_stock=e.target.value;}})); m.appendChild(f2);
+  m.appendChild(h("button",{className:"btn",onclick:function(){
+    sb.from("items").update({name:f.name,min_stock:Number(f.min_stock)||0}).eq("id",editingItem.id).then(function(res){
+      if(res.error){state.error="خطا: "+res.error.message;render();return;} showItemModal=false; loadAll();
+    });
+  }},["ذخیره"]));
+  bg.appendChild(m); return bg;
+}
+
+/* ============================================================ ویزارد ثبت ورود/خروج ============================================================ */
+var wz = null; // {type, step, rootId, subId, item, itemQuery, form}
+function startWizard(type){
+  wz = { type:type, step:1, rootId:null, subId:null, item:null, itemQuery:"",
+    form: type==="in" ? {
+      tx_datetime: nowLocal(), quantity:"", unit:"عدد", seller_name:"", driver_name:"", car_number:"",
+      waybill_file:null, invoice_file:null
+    } : {
+      tx_datetime: nowLocal(), quantity:"", unit:"عدد", requester_name:"", usage_location:"", signature_file:null
+    }
+  };
+  state.page="wizard"; state.error=""; render();
+}
+function pageWizard(){
+  var wrap=h("div",{});
+  wrap.appendChild(topBar(wz.type==="in"?"ثبت ورود جنس":"ثبت خروج جنس"));
+  var content=h("div",{className:"content"});
+  var dots=h("div",{className:"step-dots"});
+  for(var s=1;s<=4;s++) dots.appendChild(h("span",{className: s<=wz.step?"on":""}));
+  content.appendChild(dots);
+  if(state.error) content.appendChild(h("div",{className:"error-box"},[state.error]));
+
+  if(wz.step===1) content.appendChild(wzStepRoot());
+  else if(wz.step===2) content.appendChild(wzStepSub());
+  else if(wz.step===3) content.appendChild(wzStepItem());
+  else content.appendChild(wzStepForm());
+
+  content.appendChild(h("button",{className:"btn-flat",style:{marginTop:"8px"},onclick:function(){ wz=null; state.page="dashboard"; render(); }},["انصراف"]));
+  wrap.appendChild(content); return wrap;
+}
+function wzStepRoot(){
+  var box=h("div",{});
+  box.appendChild(h("div",{className:"hint"},["مرحله ۱ از ۴ — این جنس مربوط به کدام مجموعه است؟"]));
+  roots().forEach(function(c){
+    var row=h("div",{className:"tree-item selectable",onclick:function(){ wz.rootId=c.id; wz.step=2; render(); }});
+    row.appendChild(h("div",{className:"t"},["📁 "+c.name])); row.appendChild(h("div",{className:"arrow"},["←"]));
+    box.appendChild(row);
+  });
+  box.appendChild(h("button",{className:"btn-outline btn",style:{marginTop:"8px"},onclick:function(){ promptNewCategory(null); }},["＋ مجموعه‌ی جدید"]));
+  return box;
+}
+function wzStepSub(){
+  var root = state.categories.find(function(c){return c.id===wz.rootId;});
+  var box=h("div",{});
+  box.appendChild(h("div",{className:"crumbs",onclick:function(){wz.step=1;render();}},["‹ "+root.name]));
+  box.appendChild(h("div",{className:"hint"},["مرحله ۲ از ۴ — کدام زیرمجموعه؟"]));
+  childrenOf(root.id).forEach(function(c){
+    var row=h("div",{className:"tree-item selectable",onclick:function(){ wz.subId=c.id; wz.step=3; render(); }});
+    row.appendChild(h("div",{className:"t"},["📂 "+c.name])); row.appendChild(h("div",{className:"arrow"},["←"]));
+    box.appendChild(row);
+  });
+  box.appendChild(h("button",{className:"btn-outline btn",style:{marginTop:"8px"},onclick:function(){ promptNewCategory(root.id); }},["＋ زیرمجموعه‌ی جدید"]));
+  return box;
+}
+function promptNewCategory(parentId){
+  var name = prompt(parentId?"نام زیرمجموعه‌ی جدید:":"نام مجموعه‌ی جدید:");
+  if(!name) return;
+  sb.from("categories").insert({name:name.trim(), parent_id:parentId}).select().then(function(res){
+    if(res.error || !res.data || !res.data[0]){ alert("خطا در ثبت"); return; }
+    state.categories.push(res.data[0]);
+    if(parentId){ wz.subId=res.data[0].id; wz.step=3; } else { wz.rootId=res.data[0].id; wz.step=2; }
+    render();
+  });
+}
+function wzStepItem(){
+  var root=state.categories.find(function(c){return c.id===wz.rootId;});
+  var sub=state.categories.find(function(c){return c.id===wz.subId;});
+  var box=h("div",{});
+  box.appendChild(h("div",{className:"crumbs",onclick:function(){wz.step=2;render();}},["‹ "+root.name+" ← "+sub.name]));
+  box.appendChild(h("div",{className:"hint"},["مرحله ۳ از ۴ — نام جنس را جستجو یا اضافه کن"]));
+  var sw=h("div",{className:"search-wrap"});
+  var inp=h("input",{type:"text",id:"wz-item-search",placeholder:"مثلاً: نبشی ۴ ...",value:wz.itemQuery,
+    oninput:function(e){ wz.itemQuery=e.target.value; render(); }});
+  sw.appendChild(inp);
+  var q = normalizeFa(wz.itemQuery);
+  var matches = itemsIn(sub.id).filter(function(i){ return !q || normalizeFa(i.name).indexOf(q)>-1; });
+  var dd=h("div",{className:"dropdown"});
+  matches.forEach(function(i){
+    var row=h("div",{},[codeBadge(i.code), i.name+"  —  موجودی: "+i.current_stock+" "+i.unit]);
+    row.onclick=function(){ wz.item=i; wz.form.unit=i.unit; wz.step=4; render(); };
+    dd.appendChild(row);
+  });
+  if(q && !matches.some(function(i){return normalizeFa(i.name)===q;})){
+    var addRow=h("div",{style:{color:"var(--navy)",fontWeight:"700"}},["＋ افزودن «"+wz.itemQuery+"» به عنوان جنس جدید"]);
+    addRow.onclick=function(){
+      wz.item={_new:true, name:wz.itemQuery.trim(), category_id:sub.id, current_stock:0};
+      wz.form.unit = wz.form.unit || "عدد";
+      wz.step=4; render();
+    };
+    dd.appendChild(addRow);
+  }
+  if(wz.itemQuery) sw.appendChild(dd);
+  box.appendChild(sw);
+  return box;
+}
+function wzStepForm(){
+  var f=wz.form;
+  var box=h("div",{});
+  var crumb = h("div",{className:"crumbs",onclick:function(){wz.step=3;render();}});
+  if(wz.item._new){
+    crumb.appendChild(document.createTextNode("‹ "+wz.item.name+" (جنس جدید)"));
+  } else {
+    crumb.appendChild(document.createTextNode("‹ "));
+    var cb = codeBadge(wz.item.code); if(cb) crumb.appendChild(cb);
+    crumb.appendChild(document.createTextNode(wz.item.name));
+  }
+  box.appendChild(crumb);
+  box.appendChild(h("div",{className:"hint"},["مرحله ۴ از ۴ — اطلاعات "+(wz.type==="in"?"ورود":"خروج")+" جنس"]));
+  var card=h("div",{className:"card"});
+
+  card.appendChild(jalaliPickerField("تاریخ و ساعت", true, f.tx_datetime, true, function(val){ f.tx_datetime=val; }));
+
+  var row=h("div",{className:"row-2"});
+  var fq=h("div",{className:"field"}); fq.appendChild(h("label",{className:"req"},["مقدار"]));
+  fq.appendChild(h("input",{type:"number",id:"wz-qty-input",value:f.quantity,oninput:function(e){f.quantity=e.target.value; render();}}));
+  row.appendChild(fq);
+  var fu=h("div",{className:"field"}); fu.appendChild(h("label",{className:"req"},["واحد"]));
+  var sel=h("select",{onchange:function(e){f.unit=e.target.value;}});
+  UNITS.forEach(function(u){ sel.appendChild(h("option",{value:u,selected:f.unit===u},[u])); });
+  fu.appendChild(sel); row.appendChild(fu);
+  card.appendChild(row);
+
+  if(wz.type==="in"){
+    var f2=h("div",{className:"field"}); f2.appendChild(h("label",{},["نام فروشنده / شرکت تولیدکننده"]));
+    f2.appendChild(h("input",{type:"text",value:f.seller_name,oninput:function(e){f.seller_name=e.target.value;}}));
+    card.appendChild(f2);
+    var row2=h("div",{className:"row-2"});
+    var f3=h("div",{className:"field"}); f3.appendChild(h("label",{},["نام راننده"]));
+    f3.appendChild(h("input",{type:"text",value:f.driver_name,oninput:function(e){f.driver_name=e.target.value;}}));
+    row2.appendChild(f3);
+    var f4=h("div",{className:"field"}); f4.appendChild(h("label",{},["شماره پلاک ماشین"]));
+    f4.appendChild(h("input",{type:"text",value:f.car_number,oninput:function(e){f.car_number=e.target.value;}}));
+    row2.appendChild(f4);
+    card.appendChild(row2);
+    var f5=h("div",{className:"field"}); f5.appendChild(h("label",{},["عکس بارنامه"]));
+    f5.appendChild(h("input",{type:"file",accept:"image/*,.pdf",onchange:function(e){f.waybill_file=e.target.files[0];render();}}));
+    if(f.waybill_file) f5.appendChild(h("div",{className:"file-ok"},["✓ "+f.waybill_file.name]));
+    card.appendChild(f5);
+    var f6=h("div",{className:"field"}); f6.appendChild(h("label",{},["عکس فاکتور"]));
+    f6.appendChild(h("input",{type:"file",accept:"image/*,.pdf",onchange:function(e){f.invoice_file=e.target.files[0];render();}}));
+    if(f.invoice_file) f6.appendChild(h("div",{className:"file-ok"},["✓ "+f.invoice_file.name]));
+    card.appendChild(f6);
+  } else {
+    var curStock = wz.item._new ? 0 : Number(wz.item.current_stock);
+    var remaining = curStock - (Number(f.quantity)||0);
+    var f7=h("div",{className:"field"}); f7.appendChild(h("label",{},["درخواست‌کننده"]));
+    f7.appendChild(h("input",{type:"text",value:f.requester_name,oninput:function(e){f.requester_name=e.target.value;}}));
+    card.appendChild(f7);
+    var f8=h("div",{className:"field"}); f8.appendChild(h("label",{},["محل مصرف"]));
+    f8.appendChild(h("input",{type:"text",value:f.usage_location,oninput:function(e){f.usage_location=e.target.value;}}));
+    card.appendChild(f8);
+    var remHint = h("div",{className:"hint"});
+    remHint.appendChild(document.createTextNode("موجودی فعلی: "+curStock+" "+f.unit+"   —   مانده بعد از این خروج: "));
+    remHint.appendChild(h("span",{className:"num"},[String(remaining)]));
+    remHint.appendChild(document.createTextNode(" "+f.unit));
+    card.appendChild(remHint);
+    var printRow=h("div",{style:{marginBottom:"14px"}});
+    printRow.appendChild(h("button",{type:"button",className:"btn btn-outline",onclick:function(e){ if(e&&e.preventDefault) e.preventDefault(); printExitDocument(); }},["🖨 پرینت سند خروج (قبل از امضا)"]));
+    card.appendChild(printRow);
+    var f9=h("div",{className:"field"}); f9.appendChild(h("label",{},["آپلود امضای تحویل‌گیرنده"]));
+    f9.appendChild(h("input",{type:"file",accept:"image/*",onchange:function(e){f.signature_file=e.target.files[0];render();}}));
+    if(f.signature_file) f9.appendChild(h("div",{className:"file-ok"},["✓ "+f.signature_file.name]));
+    card.appendChild(f9);
+  }
+  box.appendChild(card);
+  box.appendChild(h("button",{className:"btn "+(wz.type==="in"?"btn-green":"btn-red"),disabled:state.loading,onclick:submitWizard},[state.loading?"در حال ثبت...":"ثبت نهایی"]));
+  return box;
+}
+async function uploadFile(file, folder){
+  if(!file) return null;
+  var path = folder+"/"+Date.now()+"_"+file.name.replace(/[^a-zA-Z0-9.\-_]/g,"_");
+  var res = await sb.storage.from("attachments").upload(path, file);
+  if(res.error) throw res.error;
+  return sb.storage.from("attachments").getPublicUrl(path).data.publicUrl;
+}
+
+/* ---------- چاپ ---------- */
+function openPrintWindow(title, bodyHtml){
+  var w = window.open("", "_blank");
+  if(!w){ alert("اجازه‌ی باز شدن پنجره‌ی چاپ داده نشد؛ لطفاً popup blocker مرورگر رو برای این سایت غیرفعال کن."); return; }
+  var html = "<!DOCTYPE html><html lang=\"fa\" dir=\"rtl\"><head><meta charset=\"UTF-8\"><title>"+title+"</title>"
+    + "<style>"
+    + "body{font-family:Tahoma,'Vazirmatn',sans-serif;color:#161616;padding:26px;}"
+    + "h1{font-size:18px;margin:0 0 4px;}"
+    + "h2{font-size:14.5px;margin:18px 0 6px;border-bottom:1px solid #999;padding-bottom:4px;}"
+    + "h3{font-size:12.5px;margin:8px 0 4px;color:#444;}"
+    + ".meta{font-size:11.5px;color:#555;margin-bottom:16px;}"
+    + "table{width:100%;border-collapse:collapse;margin-top:6px;margin-bottom:14px;}"
+    + "th,td{border:1px solid #999;padding:7px 8px;font-size:12.5px;text-align:right;}"
+    + "th{background:#eee;}"
+    + ".field-row{display:flex;justify-content:space-between;margin:0;font-size:13.5px;border-bottom:1px dashed #bbb;padding:8px 2px;}"
+    + ".field-row b{color:#000;}"
+    + ".sign-box{margin-top:60px;display:flex;justify-content:space-between;gap:20px;}"
+    + ".sign-box div{flex:1;text-align:center;border-top:1px solid #444;padding-top:6px;font-size:12px;}"
+    + ".print-btn{display:block;margin:24px auto 0;padding:10px 22px;font-size:13px;}"
+    + "@media print{ .print-btn{display:none;} }"
+    + "</style></head><body>"
+    + bodyHtml
+    + "<button class=\"print-btn\" onclick=\"window.print()\">چاپ</button>"
+    + "</body></html>";
+  w.document.open(); w.document.write(html); w.document.close();
+  setTimeout(function(){ try{ w.focus(); w.print(); }catch(e){} }, 350);
+}
+function printExitDocument(){
+  if(!wz || wz.type!=="out") return;
+  var f = wz.form;
+  var curStock = wz.item._new ? 0 : Number(wz.item.current_stock);
+  var remaining = curStock - (Number(f.quantity)||0);
+  var body = "<h1>سند خروج جنس از انبار</h1>"
+    + "<div class=\"meta\">تاریخ چاپ: "+ fmtDTLong(new Date()) +"</div>"
+    + "<div class=\"field-row\"><span>نام جنس</span><b>"+ escHtml(wz.item.name) +"</b></div>"
+    + (wz.item.code ? "<div class=\"field-row\"><span>کد جنس</span><b>"+ escHtml(wz.item.code) +"</b></div>" : "")
+    + "<div class=\"field-row\"><span>مقدار خروج</span><b>"+ escHtml((f.quantity||"-")+" "+f.unit) +"</b></div>"
+    + "<div class=\"field-row\"><span>تاریخ و ساعت خروج</span><b>"+ escHtml(fmtDT(f.tx_datetime)) +"</b></div>"
+    + "<div class=\"field-row\"><span>درخواست‌کننده</span><b>"+ escHtml(f.requester_name||"-") +"</b></div>"
+    + "<div class=\"field-row\"><span>محل مصرف</span><b>"+ escHtml(f.usage_location||"-") +"</b></div>"
+    + "<div class=\"field-row\"><span>موجودی قبل از خروج</span><b>"+ escHtml(curStock+" "+f.unit) +"</b></div>"
+    + "<div class=\"field-row\"><span>مانده بعد از خروج</span><b>"+ escHtml(remaining+" "+f.unit) +"</b></div>"
+    + "<div class=\"sign-box\"><div>امضای تحویل‌دهنده انبار</div><div>امضای تحویل‌گیرنده / درخواست‌کننده</div></div>";
+  openPrintWindow("سند خروج جنس", body);
+}
+function printHistoryReport(list){
+  var rowsHtml = list.map(function(t){
+    var partner = t.type==="in" ? (t.seller_name||"-") : (t.usage_location||"-");
+    return "<tr>"
+      + "<td>"+escHtml(fmtDT(t.tx_datetime))+"</td>"
+      + "<td>"+(t.type==="in"?"ورود":"خروج")+"</td>"
+      + "<td>"+escHtml(t.items?(t.items.code||"-"):"-")+"</td>"
+      + "<td>"+escHtml(t.items?t.items.name:"-")+"</td>"
+      + "<td>"+escHtml(t.quantity+" "+t.unit)+"</td>"
+      + "<td>"+escHtml(partner)+"</td>"
+      + "<td>"+escHtml(t.remaining_stock)+"</td>"
+      + "</tr>";
+  }).join("");
+  var body = "<h1>گزارش تراکنش‌های انبار</h1>"
+    + "<div class=\"meta\">تاریخ چاپ: "+ fmtDTLong(new Date()) +" — تعداد ردیف‌ها: "+ toFaDigits(list.length) +"</div>"
+    + "<table><thead><tr><th>تاریخ و ساعت</th><th>نوع</th><th>کد</th><th>جنس</th><th>مقدار</th><th>فروشنده / محل مصرف</th><th>مانده</th></tr></thead>"
+    + "<tbody>"+ (rowsHtml || "<tr><td colspan=\"7\">تراکنشی یافت نشد</td></tr>") +"</tbody></table>";
+  openPrintWindow("گزارش تراکنش‌ها", body);
+}
+function printInventoryReport(){
+  var rowsHtml = state.items.map(function(i){
+    return "<tr><td>"+escHtml(i.code||"-")+"</td><td>"+escHtml(i.name)+"</td><td>"+escHtml(catPath(i.category_id))+"</td>"
+      + "<td>"+escHtml(i.current_stock+" "+i.unit)+"</td><td>"+escHtml(i.min_stock||0)+"</td></tr>";
+  }).join("");
+  var body = "<h1>گزارش موجودی انبار</h1>"
+    + "<div class=\"meta\">تاریخ چاپ: "+ fmtDTLong(new Date()) +"</div>"
+    + "<table><thead><tr><th>کد</th><th>نام جنس</th><th>دسته‌بندی</th><th>موجودی</th><th>حد هشدار</th></tr></thead>"
+    + "<tbody>"+ (rowsHtml || "<tr><td colspan=\"5\">جنسی ثبت نشده</td></tr>") +"</tbody></table>";
+  openPrintWindow("گزارش موجودی انبار", body);
+}
+function escHtml(s){ return String(s==null?"-":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+async function submitWizard(){
+  var f = wz.form;
+  if(!f.quantity || Number(f.quantity)<=0){ state.error="مقدار را وارد کنید"; render(); return; }
+  if(wz.type==="out" && !wz.item._new && Number(f.quantity) > Number(wz.item.current_stock)){
+    state.error="موجودی کافی نیست (موجودی فعلی: "+wz.item.current_stock+" "+wz.item.unit+")"; render(); return;
+  }
+  state.loading=true; state.error=""; render();
+  try{
+    var itemId = wz.item.id;
+    if(wz.item._new){
+      var insRes = await sb.from("items").insert({name:wz.item.name, unit:f.unit, category_id:wz.item.category_id, current_stock:0, code:generateItemCode(wz.item.category_id)}).select();
+      if(insRes.error) throw insRes.error;
+      itemId = insRes.data[0].id;
+      wz.item.id = itemId; wz.item.current_stock = 0; wz.item._new=false;
+    }
+    var curStock = Number(wz.item.current_stock);
+    var newStock = wz.type==="in" ? curStock + Number(f.quantity) : curStock - Number(f.quantity);
+
+    var payload = { type:wz.type, item_id:itemId, quantity:Number(f.quantity), unit:f.unit,
+      tx_datetime: new Date(f.tx_datetime).toISOString(), user_id: state.currentUser.id, remaining_stock:newStock };
+    if(wz.type==="in"){
+      payload.seller_name=f.seller_name||null; payload.driver_name=f.driver_name||null; payload.car_number=f.car_number||null;
+      payload.waybill_file_url = await uploadFile(f.waybill_file,"waybills");
+      payload.invoice_file_url = await uploadFile(f.invoice_file,"invoices");
+    } else {
+      payload.requester_name=f.requester_name||null; payload.usage_location=f.usage_location||null;
+      payload.signature_file_url = await uploadFile(f.signature_file,"signatures");
+    }
+    var res = await sb.from("transactions").insert(payload);
+    if(res.error) throw res.error;
+    var res2 = await sb.from("items").update({current_stock:newStock}).eq("id",itemId);
+    if(res2.error) throw res2.error;
+    state.loading=false; wz=null; state.page="dashboard"; loadAll(); render();
+  }catch(err){
+    state.loading=false; state.error="خطا در ثبت: "+(err.message||"دوباره تلاش کنید"); render();
+  }
+}
+
+/* ============================================================ تراکنش‌ها/گزارش‌ها ============================================================ */
+var histFilter="all", histFrom="", histTo="";
+function pageHistory(){
+  var wrap=h("div",{}); wrap.appendChild(topBar("تراکنش‌ها و گزارش‌ها"));
+  var content=h("div",{className:"content"});
+  var seg=h("div",{className:"row-2",style:{marginBottom:"10px"}});
+  [["all","همه"],["in","ورود"],["out","خروج"]].forEach(function(p){});
+  var segWrap=h("div",{style:{display:"flex",gap:"8px",marginBottom:"14px"}});
+  [["all","همه"],["in","ورود"],["out","خروج"]].forEach(function(p){
+    segWrap.appendChild(h("button",{className: histFilter===p[0]?"btn":"btn btn-outline", style:{flex:"1",padding:"9px"}, onclick:function(){histFilter=p[0];render();}},[p[1]]));
+  });
+  content.appendChild(segWrap);
+  var row=h("div",{className:"row-2"});
+  row.appendChild(jalaliPickerField("از تاریخ", false, histFrom, false, function(val){ histFrom=val; }));
+  row.appendChild(jalaliPickerField("تا تاریخ", false, histTo, false, function(val){ histTo=val; }));
+  content.appendChild(row);
+  if(histFrom || histTo) content.appendChild(h("button",{className:"btn-flat",style:{marginTop:"-6px",marginBottom:"8px"},onclick:function(){histFrom="";histTo="";render();}},["✕ پاک کردن فیلتر تاریخ"]));
+  var list = state.transactions.filter(function(t){
+    if(histFilter!=="all" && t.type!==histFilter) return false;
+    var d = String(t.tx_datetime).slice(0,10);
+    if(histFrom && d<histFrom) return false;
+    if(histTo && d>histTo) return false;
+    return true;
+  });
+  var exportRow=h("div",{className:"row-2"},[
+    h("button",{className:"btn btn-outline",onclick:function(){exportTxExcel(list);}},["⬇ اکسل تراکنش‌ها"]),
+    h("button",{className:"btn btn-outline",onclick:exportInvExcel},["⬇ اکسل موجودی"])
+  ]);
+  content.appendChild(exportRow);
+  var printRow=h("div",{className:"row-2",style:{marginTop:"9px"}},[
+    h("button",{className:"btn btn-outline",onclick:function(){printHistoryReport(list);}},["🖨 پرینت تراکنش‌ها"]),
+    h("button",{className:"btn btn-outline",onclick:printInventoryReport},["🖨 پرینت موجودی"])
+  ]);
+  content.appendChild(printRow);
+  content.appendChild(h("div",{className:"section-title"},[list.length+" تراکنش"]));
+  content.appendChild(ledgerCard(list));
+  wrap.appendChild(content); wrap.appendChild(fabs()); return wrap;
+}
+function exportTxExcel(list){
+  var rows = list.map(function(t){
+    return { "تاریخ و ساعت": fmtDT(t.tx_datetime), "نوع": t.type==="in"?"ورود":"خروج",
+      "کد جنس": t.items?(t.items.code||"-"):"-", "جنس": t.items?t.items.name:"-", "مقدار": t.quantity, "واحد": t.unit,
+      "فروشنده": t.seller_name||"-", "راننده": t.driver_name||"-", "پلاک": t.car_number||"-",
+      "درخواست‌کننده": t.requester_name||"-", "محل مصرف": t.usage_location||"-", "مانده": t.remaining_stock };
+  });
+  var ws=XLSX.utils.json_to_sheet(rows), wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"تراکنش‌ها");
+  XLSX.writeFile(wb,"گزارش-تراکنش‌ها-"+todayStr()+".xlsx");
+}
+function exportInvExcel(){
+  var rows = state.items.map(function(i){
+    return { "کد": i.code||"-", "نام": i.name, "دسته": catPath(i.category_id), "واحد": i.unit, "موجودی": i.current_stock, "حد هشدار": i.min_stock||0 };
+  });
+  var ws=XLSX.utils.json_to_sheet(rows), wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"موجودی");
+  XLSX.writeFile(wb,"موجودی-انبار-"+todayStr()+".xlsx");
+}
+
+/* ============================================================ دسته‌بندی‌ها ============================================================ */
+function pageCategories(){
+  if(!can("categories.manage")){ state.page="dashboard"; return h("div",{}); }
+  var wrap=h("div",{}); wrap.appendChild(topBar("دسته‌بندی‌ها"));
+  var content=h("div",{className:"content"});
+  content.appendChild(h("button",{className:"btn-flat",onclick:function(){openCategoryModal(null,null);}},["＋ مجموعه‌ی جدید"]));
+  roots().forEach(function(root){
+    var card=h("div",{className:"card"});
+    var head=h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}});
+    head.appendChild(h("div",{className:"item-name"},["📁 "+root.name]));
+    var ops=h("div",{style:{display:"flex",gap:"12px"}});
+    ops.appendChild(h("button",{className:"btn-flat",style:{padding:0,fontSize:"11.5px"},onclick:function(){openCategoryModal(null,root);}},["ویرایش"]));
+    ops.appendChild(h("button",{className:"btn-flat",style:{padding:0,fontSize:"11.5px",color:"var(--red)"},onclick:function(){deleteCategory(root);}},["حذف"]));
+    head.appendChild(ops); card.appendChild(head);
+    childrenOf(root.id).forEach(function(c){
+      var row=h("div",{className:"item-row"});
+      row.appendChild(h("div",{},["📂 "+c.name]));
+      var ops2=h("div",{style:{display:"flex",gap:"12px"}});
+      ops2.appendChild(h("button",{className:"btn-flat",style:{padding:0,fontSize:"11.5px"},onclick:function(){openCategoryModal(root.id,c);}},["ویرایش"]));
+      ops2.appendChild(h("button",{className:"btn-flat",style:{padding:0,fontSize:"11.5px",color:"var(--red)"},onclick:function(){deleteCategory(c);}},["حذف"]));
+      row.appendChild(ops2); card.appendChild(row);
+    });
+    content.appendChild(h("button",{className:"btn-flat",style:{marginBottom:"14px"},onclick:function(){openCategoryModal(root.id,null);}},["＋ زیرمجموعه برای «"+root.name+"»"]));
+    content.appendChild(card);
+  });
+  wrap.appendChild(content); return wrap;
+}
+function deleteCategory(c){
+  if(!confirm("«"+c.name+"» حذف شود؟ (زیرمجموعه‌ها و اجناس داخلش هم حذف می‌شن)")) return;
+  sb.from("categories").delete().eq("id",c.id).then(function(res){ if(res.error){alert("خطا در حذف");return;} loadAll(); });
+}
+var showCatModal=false, catModalParent=null, editingCat=null, catForm=null;
+function openCategoryModal(parentId, editCat){
+  catModalParent=parentId; editingCat=editCat||null;
+  catForm={name: editCat?editCat.name:""};
+  showCatModal=true; state.error=""; render();
+}
+function buildCategoryModal(){
+  if(!showCatModal) return null;
+  var bg=h("div",{className:"modal-bg",onclick:function(e){if(e.target===bg){showCatModal=false;render();}}});
+  var m=h("div",{className:"modal"});
+  m.appendChild(h("div",{className:"modal-head"},[h("h3",{},[editingCat?"ویرایش":(catModalParent?"زیرمجموعه‌ی جدید":"مجموعه‌ی جدید")]),h("button",{className:"close-x",onclick:function(){showCatModal=false;render();}},["×"])]));
+  if(state.error) m.appendChild(h("div",{className:"error-box"},[state.error]));
+  var f1=h("div",{className:"field"}); f1.appendChild(h("label",{},["نام"]));
+  f1.appendChild(h("input",{type:"text",value:catForm.name,oninput:function(e){catForm.name=e.target.value;}})); m.appendChild(f1);
+  m.appendChild(h("button",{className:"btn",onclick:function(){
+    if(!catForm.name){state.error="نام را وارد کنید";render();return;}
+    var q = editingCat ? sb.from("categories").update({name:catForm.name}).eq("id",editingCat.id)
+      : sb.from("categories").insert({name:catForm.name, parent_id:catModalParent});
+    q.then(function(res){ if(res.error){state.error="خطا: "+res.error.message;render();return;} showCatModal=false; loadAll(); });
+  }},["ذخیره"]));
+  bg.appendChild(m); return bg;
+}
+
+/* ============================================================ کاربران ============================================================ */
+function pageUsers(){
+  if(!can("users.manage")){ state.page="dashboard"; return h("div",{}); }
+  var wrap=h("div",{}); wrap.appendChild(topBar("مدیریت کاربران"));
+  var content=h("div",{className:"content"});
+  content.appendChild(h("button",{className:"btn-flat",onclick:function(){openUserModal(null);}},["＋ کاربر جدید"]));
+  var card=h("div",{className:"card"});
+  if(!state.users.length) card.appendChild(h("div",{className:"empty"},["کاربری تعریف نشده"]));
+  state.users.forEach(function(u){
+    var row=h("div",{className:"item-row"});
+    var left=h("div",{});
+    left.appendChild(h("div",{className:"item-name"},[u.name]));
+    left.appendChild(h("div",{className:"item-sub"},["کد: "+u.code]));
+    var ops=h("div",{style:{marginTop:"6px",display:"flex",gap:"14px"}});
+    ops.appendChild(h("button",{className:"btn-flat",style:{padding:0,fontSize:"11.5px"},onclick:function(){openUserModal(u);}},["ویرایش"]));
+    if(u.id!==state.currentUser.id) ops.appendChild(h("button",{className:"btn-flat",style:{padding:0,fontSize:"11.5px",color:"var(--red)"},onclick:function(){deleteUser(u);}},["حذف"]));
+    left.appendChild(ops); row.appendChild(left);
+    row.appendChild(h("span",{className:"badge "+(u.role==="admin"?"badge-admin":"badge-user")},[u.role==="admin"?"مدیر":"کاربر"]));
+    card.appendChild(row);
+  });
+  content.appendChild(card); wrap.appendChild(content); return wrap;
+}
+function deleteUser(u){
+  if(!confirm("کاربر «"+u.name+"» حذف شود؟")) return;
+  sb.from("users").delete().eq("id",u.id).then(function(res){ if(res.error){alert("خطا در حذف");return;} loadUsers(); });
+}
+var showUserModal=false, editingUser=null, userForm=null;
+function openUserModal(u){
+  editingUser=u||null; userForm = u?{name:u.name,code:u.code,role:u.role,password:""}:{name:"",code:"",role:"user",password:""};
+  showUserModal=true; state.error=""; render();
+}
+function buildUserModal(){
+  if(!showUserModal) return null;
+  var f=userForm;
+  var bg=h("div",{className:"modal-bg",onclick:function(e){if(e.target===bg){showUserModal=false;render();}}});
+  var m=h("div",{className:"modal"});
+  m.appendChild(h("div",{className:"modal-head"},[h("h3",{},[editingUser?"ویرایش کاربر":"کاربر جدید"]),h("button",{className:"close-x",onclick:function(){showUserModal=false;render();}},["×"])]));
+  if(state.error) m.appendChild(h("div",{className:"error-box"},[state.error]));
+  var f1=h("div",{className:"field"}); f1.appendChild(h("label",{},["نام"]));
+  f1.appendChild(h("input",{type:"text",value:f.name,oninput:function(e){f.name=e.target.value;}})); m.appendChild(f1);
+  var f2=h("div",{className:"field"}); f2.appendChild(h("label",{},["کد کاربری"]));
+  f2.appendChild(h("input",{type:"text",value:f.code,oninput:function(e){f.code=e.target.value;}})); m.appendChild(f2);
+  var f3=h("div",{className:"field"}); f3.appendChild(h("label",{},[editingUser?"رمز جدید (خالی = بدون تغییر)":"رمز عبور"]));
+  f3.appendChild(h("input",{type:"password",value:f.password,oninput:function(e){f.password=e.target.value;}})); m.appendChild(f3);
+  var f4=h("div",{className:"field"}); f4.appendChild(h("label",{},["نقش"]));
+  var sel=h("select",{onchange:function(e){f.role=e.target.value;}});
+  sel.appendChild(h("option",{value:"user",selected:f.role==="user"},["کاربر عادی"]));
+  sel.appendChild(h("option",{value:"admin",selected:f.role==="admin"},["مدیر"]));
+  f4.appendChild(sel); m.appendChild(f4);
+  m.appendChild(h("button",{className:"btn",onclick:function(){
+    if(!f.name||!f.code){state.error="نام و کد را وارد کنید";render();return;}
+    if(!editingUser && !f.password){state.error="رمز عبور را وارد کنید";render();return;}
+    var code=toLatinDigits(f.code.trim());
+    if(editingUser){
+      sb.from("users").update({name:f.name,code:code,role:f.role}).eq("id",editingUser.id).then(function(res){
+        if(res.error){state.error="خطا: "+res.error.message;render();return;}
+        var after=function(){showUserModal=false;loadUsers();};
+        if(f.password){ sb.rpc("update_user_password",{p_id:editingUser.id,p_new_password:toLatinDigits(f.password)}).then(after); } else after();
+      });
+    } else {
+      sb.rpc("create_user",{p_name:f.name,p_code:code,p_password:toLatinDigits(f.password),p_role:f.role}).then(function(res){
+        if(res.error){state.error="خطا: "+res.error.message;render();return;} showUserModal=false; loadUsers();
+      });
+    }
+  }},["ذخیره"]));
+  bg.appendChild(m); return bg;
+}
+
+/* ============================================================ رندر ============================================================ */
+function render(){
+  var active = document.activeElement;
+  var focusId = (active && active.id) ? active.id : null;
+  var selStart = focusId && "selectionStart" in active ? active.selectionStart : null;
+  var selEnd = focusId && "selectionEnd" in active ? active.selectionEnd : null;
+
+  var app=document.getElementById("app"); app.innerHTML="";
+  if(!state.currentUser){ app.appendChild(pageLogin()); restoreFocus(focusId,selStart,selEnd); return; }
+  var content;
+  if(state.page==="dashboard") content=pageDashboard();
+  else if(state.page==="inventory") content=pageInventory();
+  else if(state.page==="wizard") content=pageWizard();
+  else if(state.page==="history") content=pageHistory();
+  else if(state.page==="categories") content=pageCategories();
+  else if(state.page==="users") content=pageUsers();
+  else content=pageDashboard();
+  app.appendChild(content);
+  var im=buildItemModal(); if(im) app.appendChild(im);
+  var cm=buildCategoryModal(); if(cm) app.appendChild(cm);
+  var um=buildUserModal(); if(um) app.appendChild(um);
+  var jm=buildJalaliPickerModal(); if(jm) app.appendChild(jm);
+  var dr=drawer(); if(dr) app.appendChild(dr);
+  restoreFocus(focusId,selStart,selEnd);
+}
+function restoreFocus(focusId,selStart,selEnd){
+  if(!focusId) return;
+  var el=document.getElementById(focusId);
+  if(!el) return;
+  el.focus();
+  if(selStart!=null && "setSelectionRange" in el){
+    try{ el.setSelectionRange(selStart,selEnd); }catch(e){}
+  }
+}
+(function init(){
+  var sess=loadSession();
+  if(sess){ state.currentUser=sess; state.page="dashboard"; loadAll(); if(can("users.manage")) loadUsers(); }
+  render();
+})();
+</script>
+</body>
+</html>

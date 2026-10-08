@@ -593,8 +593,8 @@ function pageDashboard(){
   var pendingExits = can("transactions.approve") ? state.transactions.filter(function(t){return t.type==="out" && t.status==="pending";}) : [];
   if(pendingExits.length){
     var pcard=h("div",{className:"card",style:{border:"2px solid var(--red)",marginBottom:"14px"}});
-    pcard.appendChild(h("div",{style:{fontWeight:"800",color:"var(--red)",marginBottom:"4px"}},["⏳ "+pendingExits.length+" درخواست خروج در انتظار تایید توئه"]));
-    pcard.appendChild(h("div",{style:{fontSize:"12.5px",color:"var(--ink-muted)",marginBottom:"10px"}},["تا تایید نکنی، این اجناس از موجودی کسر نمی‌شن."]));
+    pcard.appendChild(h("div",{style:{fontWeight:"800",color:"var(--red)",marginBottom:"4px"}},["⏳ "+pendingExits.length+"درخواست خروج در انتظار تایید "]));
+    pcard.appendChild(h("div",{style:{fontSize:"12.5px",color:"var(--ink-muted)",marginBottom:"10px"}},["تا تایید نکنید ، این اجناس از موجودی کسر نمی شوند."]));
     pcard.appendChild(ledgerCard(pendingExits.slice(0,5)));
     content.appendChild(pcard);
   }
